@@ -3,6 +3,7 @@ import {IEvents} from "../../components/base/events";
 import { TemplateCardType } from "../../components/view/view";
 
 export interface IView {
+    validation: IValidation;
     emitter: IEvents;
     uppendPlaces: Record<string, HTMLElement>;
     modalWindow: HTMLElement;
@@ -16,7 +17,7 @@ export interface IView {
     addAppendPlace<T extends HTMLElement>(placeName: string, classForAppend: string, context?: HTMLElement): void; // метод добавляет в массив "Места для аппенда" новое место. 
     addModalWindowContainer<T extends HTMLElement>(place: string): void // метод для заполнения поля, которое хранит ДОМ элемент с модальным окном, которое открывает и закрывают соответствующие методы
     renderCardsArray (cardsArray: ProductSettings[], cardType: TemplateCardType, place: string, doEmpty?: boolean): void; // рендерится сразу массив карточек и выводится на страницу
-    renderCard(settingsCard: ProductSettings, cardType: TemplateCardType): HTMLElement; // рендерится карточка товара в одном из трех видов
+    renderCard(settingsCard: ProductSettings, cardType: TemplateCardType, numberItem?: number): HTMLElement; // рендерится карточка товара в одном из трех видов
     renderBusket(productList: ProductSettings[], totalPrice: string): void; // рендерится и выводится в модальное окно корзина
     removeProductFromBusketList(data: {id: string}): void; // метод удалаяет карточку товара из списка корзины
     renderOrderFirst(): void; // рендерит первую страницу оформления заказа, где выбирается форма оплаты и вводится адрес
@@ -60,3 +61,21 @@ export interface BusketSettings {
     total_price: number;
 }
 
+export type FormForValidation = {
+    formValidation: HTMLFormElement;
+    inputList: HTMLInputElement[];
+    validity: boolean
+}
+
+
+export interface IValidation {
+    formList: Record<string, FormForValidation>;
+
+    formListSet( nameForm: string, formElement: HTMLFormElement, inputClass: string): void;
+    checkInputValidity(inputElement: HTMLInputElement, formElement: HTMLFormElement): void;
+    showInputError( errorMessage: string, formElement: HTMLFormElement): void;
+    hideInputError(formElement: HTMLFormElement): void;
+    toggleButtonState(formElement: HTMLFormElement, inputList: HTMLInputElement[]): void;
+    setEventListeners(nameForm: string): void;
+    clearValidation(nameForm: string): void;
+}

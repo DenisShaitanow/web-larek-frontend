@@ -3,6 +3,7 @@ import { ILarek } from "../../types/presenter/presenter";
 import { ILarekModel} from "../../types/model/model";
 import {IEvents} from "../base/events";
 import { IView, ProductSettings} from "../../types/view/view";
+import { Validation } from "../view/view";
 
 
 export class Larek implements ILarek {
@@ -61,11 +62,11 @@ export class Larek implements ILarek {
         await this.larekModel.doPay();
         this.view.renderPayDone(this.larekModel.order.totalOrder.toString());
         this.view.emptyButtonBasketCounter();
+        this.larekModel.busket.emtyBusket();
     }
 
     newBuys(): void {
         this.view.closeModalWindow();
-        this.larekModel.busket.emtyBusket();
         this.renderProductList();
     }
 

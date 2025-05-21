@@ -29,8 +29,6 @@ larek.view.addAppendPlace<HTMLDivElement>('modalContent' , 'modal__content', lar
 larek.view.addAppendPlace<HTMLUListElement>('basket' , 'basket__list', larek.view.templateBasket); // назначаю место для апенда списка карточек в корзине
 larek.init();
 
-/*larek.renderProductList(); // вывожу карточки на страницу
-larek.view.openBusketListener(); // назначаю слушатель на кнопку корзины*/
 
 
 

@@ -74,7 +74,7 @@ export class LarekModel implements ILarekModel {
             total: this.busket.totalPrice,
             items: this.busket.idList
         };
-
+        console.log(orderData);
         return this.api.post(`/order`, orderData)
         .then((response: {id: string, total: number}) => {
             this.order.idOrderSet=response.id;

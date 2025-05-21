@@ -1,7 +1,7 @@
 
 import { cloneTemplate, ensureAllElements, isSelector, ensureElement, createElement } from "../../utils/utils";
 import {IEvents} from "../base/events";
-import { IView } from "../../types/view/view";
+import { IView, IValidation, FormForValidation } from "../../types/view/view";
 import { ProductSettings } from "../../types/view/view";
 import { API_URL, CDN_URL } from '../../utils/constants';
 import { buffer } from "stream/consumers";
@@ -12,7 +12,9 @@ export type TemplateCardType =  "CardCatalog" | "CardPreview" | "CardBasket";
 
 export class View implements IView {
 
+    validation: IValidation;
     emitter: IEvents;
+
     uppendPlaces: Record<string, HTMLElement> = {};
     modalWindow: HTMLElement;
     headerBusketButton: HTMLButtonElement;
@@ -22,15 +24,33 @@ export class View implements IView {
     templateCardPreview: HTMLTemplateElement;
     templateCardBasket: HTMLTemplateElement;
 
+    orderWindow: HTMLFormElement;
+    listenersOrderAttached: boolean = false;
+    orderData: { pay: "personally" | "online" | null, address: string};
+    contactsWindow: HTMLFormElement;
+    listenersContactsAttached: boolean = false;
+    contactsData: {mail: string, phone: string};
+
 
     constructor(emitter: IEvents) {
-
+        this.validation=new Validation();
         this.emitter=emitter;
 
+
+        this.orderWindow  = cloneTemplate<HTMLFormElement>('#order');
+        this.orderData = {
+            pay: null,
+            address: ''
+        };
+        this.contactsData = {
+            mail: '',
+            phone: ''
+        };
+        this.contactsWindow = cloneTemplate<HTMLFormElement>('#contacts');
         this.templateCardBasket=ensureElement<HTMLTemplateElement>('#card-basket');
         this.templateCardPreview=ensureElement<HTMLTemplateElement>('#card-preview');
         this.templateCardCatalog=ensureElement<HTMLTemplateElement>('#card-catalog');
-        this.templateBasket=cloneTemplate<HTMLTemplateElement>('#basket');
+        this.templateBasket=cloneTemplate<HTMLDivElement>('#basket');
         this.headerBusketButtonCounter=ensureElement<HTMLSpanElement>('.header__basket-counter');
         this.headerBusketButton=ensureElement<HTMLButtonElement>('.header__basket');
         
@@ -67,9 +87,14 @@ export class View implements IView {
                 if (target.classList.contains('modal')) {
                     this.closeModalWindow();
                 }
-            });
-            
+            });  
         })
+
+        this.validation.formListSet( 'order', this.orderWindow as HTMLFormElement, 'form__input');
+        this.validation.setEventListeners('order');
+        this.validation.formListSet('contacts', this.contactsWindow as HTMLFormElement, 'form__input');
+        this.validation.setEventListeners('contacts');
+
     }
 
     emptyButtonBasketCounter(): void {
@@ -78,13 +103,14 @@ export class View implements IView {
     
 
     renderCardsArray (cardsArray: ProductSettings[], cardType: TemplateCardType, place: string, doEmpty: boolean = false): void {
+        let numberItem: number = 0;
         cardsArray.forEach(item => {
-            this.uppendElement(this.renderCard(item, cardType), place, doEmpty);
-
+            numberItem +=1;
+            this.uppendElement(this.renderCard(item, cardType, numberItem), place, doEmpty);
         })
     }
 
-    renderCard(settingsCard: ProductSettings, cardType: TemplateCardType): HTMLElement {
+    renderCard(settingsCard: ProductSettings, cardType: TemplateCardType, numberItem: number = 1): HTMLElement {
         let rend: HTMLElement; 
     
         switch (cardType) {
@@ -150,12 +176,15 @@ export class View implements IView {
     
             case "CardBasket":
                 rend = cloneTemplate<HTMLTemplateElement>(this.templateCardBasket); 
-                const titleBas = rend.querySelector('.card__title') as HTMLElement;
-                const priceBas = rend.querySelector('.card__price') as HTMLElement;
-                const buttonDeleteProduct=rend.querySelector('.basket__item-delete') as HTMLButtonElement;
+                const titleBas = ensureElement<HTMLSpanElement>('.card__title' , rend);
+                const priceBas = ensureElement<HTMLSpanElement>('.card__price' , rend);
+                const buttonDeleteProduct = ensureElement<HTMLButtonElement>('.basket__item-delete' , rend);
+                const itemIndex = ensureElement<HTMLSpanElement>('.basket__item-index' , rend);
                 if (!titleBas || !priceBas) {
                     console.log('Отсутствуют необходимые элементы в шаблоне CardBasket');
-                  }
+                }
+
+                itemIndex.textContent = numberItem.toString();
                 titleBas.textContent = settingsCard.title;
                 priceBas.textContent = settingsCard.price.toString();
                 rend.dataset.id=`${settingsCard.id}`;
@@ -172,23 +201,26 @@ export class View implements IView {
     renderBusket(productList: ProductSettings[], totalPrice: string):void {
         const basket=this.templateBasket;
         const basketTitle=ensureElement<HTMLHeadElement>('.modal__title', basket);
-        const basketPrice=basket.querySelector('.basket__price') as HTMLElement;
-        const buttonOrder=basket.querySelector('.modal__actions button');
+        const basketPrice = ensureElement<HTMLSpanElement>('.basket__price' , basket);
+        const buttonOrder = ensureElement<HTMLSpanElement>('.basket__button' , basket);
         this.uppendPlaces.basket.innerHTML='';
         this.renderCardsArray(productList, 'CardBasket', 'basket', false);
         this.headerBusketButtonCounter.textContent=productList.length.toString();
         buttonOrder.addEventListener('click', () => {
             this.emitter.emit('openOrder')
         })
-        basketPrice.textContent=totalPrice;
 
         if (productList.length === 0) {
             basketTitle.textContent='В корзине нет товаров.'
             basketPrice.textContent='';
+            buttonOrder.setAttribute('disabled','true');
+        } else {
+            basketTitle.textContent='Корзина'
+            basketPrice.textContent=totalPrice;
+            buttonOrder.removeAttribute('disabled');
         }
 
         this.uppendElement(basket, 'modalContent', true);
-        
     }
 
     removeProductFromBusketList(data: {id: string}): void {
@@ -197,76 +229,114 @@ export class View implements IView {
     }
     
     renderOrderFirst(): void {
-        const order=cloneTemplate('#order');
-        const buttonOnline=order.querySelector('button[name="card"]') as HTMLButtonElement;
-        const buttonPersonally=order.querySelector('button[name="cash"]') as HTMLButtonElement;
-        const buttonContinue=order.querySelector('.order__button') as HTMLButtonElement;
-        const inputAddress=order.querySelector('input[name="address"]') as HTMLInputElement;
 
-        let data: { pay: "personally" | "online" | null, address: string; } = {
-            pay: null,
-            address: ''
-        };
+        this.orderWindow.reset();
+        this.validation.clearValidation('order');
+        
+        const buttonOnline=ensureElement<HTMLButtonElement>('button[name="card"]' , this.orderWindow);
+        const buttonPersonally=ensureElement<HTMLButtonElement>('button[name="cash"]' , this.orderWindow);
+        const buttonContinue=ensureElement<HTMLButtonElement>('.order__button' , this.orderWindow);
+        const inputAddress=ensureElement<HTMLInputElement>('.form__input', this.orderWindow);
+
+        if (this.listenersOrderAttached) {
+            // Переходим сразу к отображению формы
+            this.orderData = {pay: null,
+                address: ''}
+            buttonOnline.classList.remove('button_checked');
+            buttonPersonally.classList.remove('button_checked');
+            buttonContinue.setAttribute('disabled', 'true');
+            this.uppendElement(this.orderWindow, 'modalContent', true);
+            return;
+        }
 
         buttonOnline.addEventListener('click', () => {
-            data.pay='online';
+            this.orderData.pay='online';
             buttonOnline.classList.add('button_checked');
             buttonPersonally.classList.remove('button_checked');
+            if (this.orderData.pay !== null && this.orderData.address !== '') {
+                buttonContinue.removeAttribute('disabled');
+            }
         });
+
         buttonPersonally.addEventListener('click', () => {
-            data.pay='personally';
+            this.orderData.pay='personally';
             buttonPersonally.classList.add('button_checked');
             buttonOnline.classList.remove('button_checked');
+            if (this.orderData.pay !== null && this.orderData.address !== '') {
+                buttonContinue.removeAttribute('disabled');
+            }
         });
 
         inputAddress.addEventListener('input', () => {
-            data.address=inputAddress.value;
-            if (data.pay !== null && data.address.length > 8) {
-                buttonContinue.removeAttribute('disabled');
+            if (this.validation.formList['order'].validity === true) {
+                this.orderData.address=inputAddress.value;
+                if (this.orderData.pay !== null && this.orderData.address !== '') {
+                    buttonContinue.removeAttribute('disabled');
+                }
+            } else {
+                buttonContinue.setAttribute('disabled', 'true');
+                this.orderData.address = '';
             }
         })
 
         buttonContinue.addEventListener('click',  event => {
             event.preventDefault();
-            this.emitter.emit('orderContinue', data);
+            this.emitter.emit('orderContinue', this.orderData);
         });
-
-        this.uppendElement(order, 'modalContent', true);
+        this.listenersOrderAttached =true;
+        this.uppendElement(this.orderWindow, 'modalContent', true);
     }   
 
     renderOrderContacts(): void {
-        const orderContacts=cloneTemplate('#contacts');
-        const buttonDoPay=ensureElement<HTMLButtonElement>('.button', orderContacts);
-        const inputEmail=orderContacts.querySelector('input[name="email"]') as HTMLInputElement;
-        const inputPhone=orderContacts.querySelector('input[name="phone"]') as HTMLInputElement;
-        
-        const data = {
-            mail: '',
-            phone: ''
-        } as { mail: string; phone: string };
+
+        const inputEmail = ensureElement<HTMLInputElement>('input[name="email"]' , this.contactsWindow);
+        const inputPhone = ensureElement<HTMLInputElement>('input[name="phone"]' , this.contactsWindow);
+        const buttonDoPay = ensureElement<HTMLButtonElement>('button[type="submit"]' , this.contactsWindow);
+
+        if (this.listenersContactsAttached) {
+            // Переходим сразу к отображению формы
+            this.contactsData = {mail: '', phone: ''};
+            this.contactsWindow.reset();
+            this.validation.clearValidation('contacts');
+            buttonDoPay.setAttribute('disabled', 'true');
+            this.uppendElement(this.orderWindow, 'modalContent', true);
+            return;
+        }
 
         inputEmail.addEventListener('input', ()=> {
-            data.mail=inputEmail.value.trim();
-            if (data.mail !== '' && data.phone !== '' ) {
-                buttonDoPay.removeAttribute('disabled');
+            if (this.validation.formList['contacts'].validity === true) {
+                this.contactsData.mail=inputEmail.value.trim();
+                this.contactsData.phone=inputPhone.value.trim();
+                if (this.contactsData.mail !== '' && this.contactsData.phone !== '') {
+                    buttonDoPay.removeAttribute('disabled');
+                }
+            } else { 
+                buttonDoPay.setAttribute('disabled', 'true');
+                this.contactsData.mail = '';
             }
-        })
+        });
 
         inputPhone.addEventListener('input', () => {
-            data.phone=inputPhone.value.trim();
-            if (data.mail !== '' && data.phone !== '' ) {
-                buttonDoPay.removeAttribute('disabled');
-            }
-        })
+            if (this.validation.formList['contacts'].validity === true) {
+                this.contactsData.phone=inputPhone.value.trim();
+                this.contactsData.mail=inputEmail.value.trim();
+                buttonDoPay.setAttribute('disabled', 'true');
+                if (this.contactsData.mail !== '' && this.contactsData.phone !== '') {
+                    buttonDoPay.removeAttribute('disabled');
+                }
+            } else { 
+                this.contactsData.phone = '';
+                buttonDoPay.setAttribute('disabled', 'true');}
+        });
 
-        orderContacts.addEventListener('submit', event => {
+        this.contactsWindow.addEventListener('submit', event => {
             event.preventDefault();
             
             // Отправляем данные в презентер
-            this.emitter.emit('doPay', data);
-            
+            this.emitter.emit('doPay', this.contactsData);
         });
-        this.uppendElement(orderContacts, 'modalContent', true);
+        this.listenersContactsAttached = true;
+        this.uppendElement(this.contactsWindow, 'modalContent', true);
     }
 
     renderPayDone(totalOrder: string): void {
@@ -326,6 +396,155 @@ export class View implements IView {
     };
 
 }
+
+
+
+/*-----------------------------------------------*/
+
+
+export class Validation implements IValidation {
+
+    formList: Record<string, FormForValidation> ={};
+    
+    constructor () {
+    }
+
+    formListSet( nameForm: string, formElement: HTMLFormElement, inputClass: string): void {
+        // Проверяем наличие формы с данным именем
+        if (this.formList[nameForm]) {
+            // Форма уже существует, значит, мы ничего не делаем
+            return;
+        }
+
+        // Получаем список инпутов для новой формы
+        const inputList = Array.from(ensureAllElements<HTMLInputElement>(`.${inputClass}`, formElement));
+        if (!inputList) {
+            throw new Error('Инпуты не найдены');
+        }
+
+        // Формируем новую запись в объекте formList
+        this.formList[nameForm] = {
+            formValidation: formElement,
+            inputList: inputList,
+            validity: false
+        };
+    }
+
+    checkInputValidity(inputElement: HTMLInputElement, formElement: HTMLFormElement): void {
+        if (inputElement.validity.patternMismatch) {
+          // встроенный метод setCustomValidity принимает на вход строку
+          // и заменяет ею стандартное сообщение об ошибке
+          inputElement.setCustomValidity(inputElement.dataset.errorMessage);
+        } else {
+          // если передать пустую строку, то будут доступны
+          // стандартные браузерные сообщения
+          inputElement.setCustomValidity("");
+        }
+      
+        if (!inputElement.validity.valid) {
+          // теперь, если ошибка вызвана регулярным выражением,
+          // переменная validationMessage хранит наше кастомное сообщение
+          this.showInputError(
+            inputElement.validationMessage,
+            formElement
+          );
+        } else {
+          this.hideInputError(formElement);
+        }
+    }
+
+    // Функция, которая добавляет класс с ошибкой
+    showInputError( errorMessage: string, formElement: HTMLFormElement): void {
+        // Находим элемент ошибки внутри самой функции
+        
+        const errorElement = ensureElement<HTMLSpanElement>(`.form__errors`, formElement);
+        
+        errorElement.textContent = errorMessage;
+    };
+      
+    // Функция, которая удаляет класс с ошибкой
+    hideInputError(formElement: HTMLFormElement): void {
+        // Находим элемент ошибки
+        
+        const errorElement = ensureElement<HTMLSpanElement>(`.form__errors`, formElement);
+        // Остальной код такой же
+        /*inputElement.classList.add(arr.inputErrorClass);*/
+        
+        errorElement.textContent = "";
+    }
+      
+    // функция активации и деактивации кнопки сабмит
+    toggleButtonState(formElement: HTMLFormElement, inputList: HTMLInputElement[]): void {
+        
+        const formNoValid = inputList.some((inputElement) => {
+          // Если поле не валидно, колбэк вернёт true
+          
+          return (
+            inputElement.validity.patternMismatch || !inputElement.validity.valid
+          );
+        });
+
+        let form: FormForValidation;
+        for (const key in this.formList) {
+            if (this.formList[key].formValidation === formElement) {
+                form = this.formList[key];
+            }
+        }
+
+        if (formNoValid === true) {
+          form.validity = false;
+        } else {
+            form.validity = true;
+        }
+    }
+ 
+    setEventListeners(nameForm: string): void {
+        
+        let form: HTMLFormElement | null = null;
+        let inputList: HTMLInputElement[] | null =null;
+
+        if (this.formList[nameForm]) {
+            // Форма уже существует, значит, мы ничего не делаем
+            form = this.formList[nameForm].formValidation;
+            inputList = this.formList[nameForm].inputList;
+        }
+
+        if (form === null && inputList === null) {
+            throw new Error('Форма не найдена');
+        }
+        
+
+        inputList.forEach((inputElement: HTMLInputElement) => {
+
+            inputElement.addEventListener("input", () => {
+                this.checkInputValidity(inputElement, form);
+                this.toggleButtonState(form, inputList);
+            });
+        });
+    }
+      
+    // Функция обнуления поля ошибок при закрытии модального окна
+    
+    clearValidation(nameForm: string): void {
+
+        let form: HTMLFormElement | null = null;
+        let inputList: HTMLInputElement[] | null =null;
+
+        if (this.formList[nameForm]) {
+            // Форма уже существует, значит, мы ничего не делаем
+            form = this.formList[nameForm].formValidation;
+            inputList = this.formList[nameForm].inputList;
+        }
+
+        this.toggleButtonState(form, inputList);
+        inputList.forEach((inputElement) => {
+          this.checkInputValidity(inputElement , form);
+        });
+    }
+}
+
+
+
     
 
 

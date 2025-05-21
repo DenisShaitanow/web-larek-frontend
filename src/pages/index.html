@@ -30,7 +30,7 @@
 		<main class="gallery"></main>
 	</div>
 
-	<div class="modal" id="modal-container">
+	<div class="modal" name="modal-container" id="modal-container">
 		<div class="modal__container">
 			<button class="modal__close" aria-label="закрыть"></button>
 			<div class="modal__content">
@@ -39,7 +39,7 @@
 		</div>
 	</div>
 
-	<div class="modal modal_active">
+	<!--<div class="modal">
 		<div class="modal__container">
 			<button class="modal__close" aria-label="закрыть"></button>
 			<div class="modal__content">
@@ -143,7 +143,7 @@
 		</div>
 	</div>
 
-	<div class="modal">
+	<div class="modal" name="order-success">
 		<div class="modal__container">
 			<button class="modal__close" aria-label="закрыть"></button>
 			<div class="modal__content">
@@ -154,7 +154,7 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</div>-->
 
 	<template id="success">
 		<div class="order-success">
@@ -220,7 +220,7 @@
 				</div>
 				<label class="order__field">
 					<span class="form__label modal__title">Адрес доставки</span>
-					<input name="address" class="form__input" type="text" placeholder="Введите адрес" />
+					<input name="address" class="form__input" type="text" placeholder="Введите адрес" minlength="8" maxlength="40" required pattern="^[0-9a-zA-Zа-яА-ЯёЁ\-\.\s\,]+$" data-error-message="Поле может содержать только латинские и кириллические буквы, знаки препинания."/>
 				</label>
 			</div>
 			<div class="modal__actions">
@@ -235,11 +235,11 @@
 			<div class="order">
 				<label class="order__field">
 					<span class="form__label modal__title">Email</span>
-					<input name="email" class="form__input" type="text" placeholder="Введите Email" />
+					<input name="email" class="form__input" type="email" placeholder="Введите Email" minlength="2" maxlength="40" required/>
 				</label>
 				<label class="order__field">
 					<span class="form__label modal__title">Телефон</span>
-					<input name="phone" class="form__input" type="text" placeholder="+7 (" />
+					<input name="phone" class="form__input" type="text" placeholder="+7 (" minlength="10" maxlength="40" required pattern="^[+0123456789]+$" data-error-message="Поле может содержать только цифры и знак '+'."/>
 				</label>
 			</div>
 			<div class="modal__actions">
