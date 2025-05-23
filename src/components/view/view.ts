@@ -1,8 +1,12 @@
 
 import { cloneTemplate, ensureAllElements, isSelector, ensureElement, createElement } from "../../utils/utils";
 import {IEvents} from "../base/events";
-import { IView, IValidation, FormForValidation } from "../../types/view/view";
+import { IView} from "../../types/view/view";
+import { IValidation } from "../../types/view/validation";
+import { Validation } from "./validation";
 import { ProductSettings } from "../../types/view/view";
+import { ModalWindow } from "./modalWindow";
+import { IModalWindow } from "../../types/view/modalWindow";
 import { API_URL, CDN_URL } from '../../utils/constants';
 import { buffer } from "stream/consumers";
 
@@ -13,13 +17,14 @@ export type TemplateCardType =  "CardCatalog" | "CardPreview" | "CardBasket";
 export class View implements IView {
 
     validation: IValidation;
+    modalWindow: IModalWindow;
     emitter: IEvents;
 
+
     uppendPlaces: Record<string, HTMLElement> = {};
-    modalWindow: HTMLElement;
     headerBusketButton: HTMLButtonElement;
     headerBusketButtonCounter: HTMLSpanElement;
-    templateBasket: HTMLElement;
+    Basket: HTMLElement;
     templateCardCatalog: HTMLTemplateElement;
     templateCardPreview: HTMLTemplateElement;
     templateCardBasket: HTMLTemplateElement;
@@ -33,7 +38,8 @@ export class View implements IView {
 
 
     constructor(emitter: IEvents) {
-        this.validation=new Validation();
+        this.validation = new Validation();
+        this.modalWindow = new ModalWindow();
         this.emitter=emitter;
 
 
@@ -50,13 +56,20 @@ export class View implements IView {
         this.templateCardBasket=ensureElement<HTMLTemplateElement>('#card-basket');
         this.templateCardPreview=ensureElement<HTMLTemplateElement>('#card-preview');
         this.templateCardCatalog=ensureElement<HTMLTemplateElement>('#card-catalog');
-        this.templateBasket=cloneTemplate<HTMLDivElement>('#basket');
+        this.Basket=cloneTemplate<HTMLDivElement>('#basket');
         this.headerBusketButtonCounter=ensureElement<HTMLSpanElement>('.header__basket-counter');
         this.headerBusketButton=ensureElement<HTMLButtonElement>('.header__basket');
         
         
         this.emitter.on('deleteFromBusket', (data: {id: string}) => this.removeProductFromBusketList(data));
 
+    }
+
+
+    init(): void {
+        this.addAppendPlace('gallery', 'gallery'); // назначаю место, куда будет вставляться карточки
+        this.addAppendPlace<HTMLDivElement>('modalContent' , 'modal__content', this.modalWindow.modalWindow);  // назначаю место в модальном окне, куда вставляется контент
+        this.addAppendPlace<HTMLUListElement>('basket' , 'basket__list', this.Basket); // назначаю место для апенда списка карточек в корзине
     }
 
     
@@ -69,23 +82,21 @@ export class View implements IView {
         this.uppendPlaces[placeName] = place;
     };
 
-    addModalWindowContainer<T extends HTMLElement>(place: string): void {
-        this.modalWindow=ensureElement<T>(place);
-    }
+    
 
     startStartListeners(): void {
         this.headerBusketButton.addEventListener('click', () => {
             this.emitter.emit('openBusket');
         });
-        const buttonClose=this.modalWindow.querySelector('.modal__close') as HTMLButtonElement;
+        const buttonClose=ensureElement<HTMLButtonElement>('.modal__close' , this.modalWindow.modalWindow);
 
-        buttonClose.addEventListener('click', () => this.closeModalWindow());
+        buttonClose.addEventListener('click', () => this.modalWindow.closeModalWindow());
 
-        this.modalWindow.addEventListener('click', (evt) => {
-            this.modalWindow.addEventListener('click', (evt) => {
+        this.modalWindow.modalWindow.addEventListener('click', (evt) => {
+            this.modalWindow.modalWindow.addEventListener('click', (evt) => {
                 const target = evt.target as HTMLElement;
                 if (target.classList.contains('modal')) {
-                    this.closeModalWindow();
+                    this.modalWindow.closeModalWindow();
                 }
             });  
         })
@@ -199,7 +210,7 @@ export class View implements IView {
     }
 
     renderBusket(productList: ProductSettings[], totalPrice: string):void {
-        const basket=this.templateBasket;
+        const basket=this.Basket;
         const basketTitle=ensureElement<HTMLHeadElement>('.modal__title', basket);
         const basketPrice = ensureElement<HTMLSpanElement>('.basket__price' , basket);
         const buttonOrder = ensureElement<HTMLSpanElement>('.basket__button' , basket);
@@ -239,7 +250,7 @@ export class View implements IView {
         const inputAddress=ensureElement<HTMLInputElement>('.form__input', this.orderWindow);
 
         if (this.listenersOrderAttached) {
-            // Переходим сразу к отображению формы
+            // Переходим сразу к отображению формы, если фукция запускается не первый раз. Чтобы не плодить слушатели.
             this.orderData = {pay: null,
                 address: ''}
             buttonOnline.classList.remove('button_checked');
@@ -371,177 +382,11 @@ export class View implements IView {
         
         placeUppend.append(element); // вывожу на страницу
     }
-
-    openModalWindow(): void {
-        const buttonClose=this.modalWindow.querySelector('.modal__close') as HTMLButtonElement;
-        this.modalWindow.classList.add('modal_active');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        document.addEventListener('keydown', (evt: KeyboardEvent) => this.handleEscKeyUp(evt));
-        buttonClose.addEventListener('click', () => this.closeModalWindow());
-    }
-
-    closeModalWindow(): void {
-        this.modalWindow.classList.remove('modal_active');
-        document.removeEventListener('keydown', this.handleEscKeyUp);
-    }
-
-    handleEscKeyUp(evt: KeyboardEvent): void { 
-        if (evt.key === "Escape") {
-            this.closeModalWindow();
-        }
-    }
-
-    set ModalWindowSet(arg: string) {
-        this.modalWindow=ensureElement<HTMLDivElement>(arg);
-    };
-
 }
 
 
 
-/*-----------------------------------------------*/
 
-
-export class Validation implements IValidation {
-
-    formList: Record<string, FormForValidation> ={};
-    
-    constructor () {
-    }
-
-    formListSet( nameForm: string, formElement: HTMLFormElement, inputClass: string): void {
-        // Проверяем наличие формы с данным именем
-        if (this.formList[nameForm]) {
-            // Форма уже существует, значит, мы ничего не делаем
-            return;
-        }
-
-        // Получаем список инпутов для новой формы
-        const inputList = Array.from(ensureAllElements<HTMLInputElement>(`.${inputClass}`, formElement));
-        if (!inputList) {
-            throw new Error('Инпуты не найдены');
-        }
-
-        // Формируем новую запись в объекте formList
-        this.formList[nameForm] = {
-            formValidation: formElement,
-            inputList: inputList,
-            validity: false
-        };
-    }
-
-    checkInputValidity(inputElement: HTMLInputElement, formElement: HTMLFormElement): void {
-        if (inputElement.validity.patternMismatch) {
-          // встроенный метод setCustomValidity принимает на вход строку
-          // и заменяет ею стандартное сообщение об ошибке
-          inputElement.setCustomValidity(inputElement.dataset.errorMessage);
-        } else {
-          // если передать пустую строку, то будут доступны
-          // стандартные браузерные сообщения
-          inputElement.setCustomValidity("");
-        }
-      
-        if (!inputElement.validity.valid) {
-          // теперь, если ошибка вызвана регулярным выражением,
-          // переменная validationMessage хранит наше кастомное сообщение
-          this.showInputError(
-            inputElement.validationMessage,
-            formElement
-          );
-        } else {
-          this.hideInputError(formElement);
-        }
-    }
-
-    // Функция, которая добавляет класс с ошибкой
-    showInputError( errorMessage: string, formElement: HTMLFormElement): void {
-        // Находим элемент ошибки внутри самой функции
-        
-        const errorElement = ensureElement<HTMLSpanElement>(`.form__errors`, formElement);
-        
-        errorElement.textContent = errorMessage;
-    };
-      
-    // Функция, которая удаляет класс с ошибкой
-    hideInputError(formElement: HTMLFormElement): void {
-        // Находим элемент ошибки
-        
-        const errorElement = ensureElement<HTMLSpanElement>(`.form__errors`, formElement);
-        // Остальной код такой же
-        /*inputElement.classList.add(arr.inputErrorClass);*/
-        
-        errorElement.textContent = "";
-    }
-      
-    // функция активации и деактивации кнопки сабмит
-    toggleButtonState(formElement: HTMLFormElement, inputList: HTMLInputElement[]): void {
-        
-        const formNoValid = inputList.some((inputElement) => {
-          // Если поле не валидно, колбэк вернёт true
-          
-          return (
-            inputElement.validity.patternMismatch || !inputElement.validity.valid
-          );
-        });
-
-        let form: FormForValidation;
-        for (const key in this.formList) {
-            if (this.formList[key].formValidation === formElement) {
-                form = this.formList[key];
-            }
-        }
-
-        if (formNoValid === true) {
-          form.validity = false;
-        } else {
-            form.validity = true;
-        }
-    }
- 
-    setEventListeners(nameForm: string): void {
-        
-        let form: HTMLFormElement | null = null;
-        let inputList: HTMLInputElement[] | null =null;
-
-        if (this.formList[nameForm]) {
-            // Форма уже существует, значит, мы ничего не делаем
-            form = this.formList[nameForm].formValidation;
-            inputList = this.formList[nameForm].inputList;
-        }
-
-        if (form === null && inputList === null) {
-            throw new Error('Форма не найдена');
-        }
-        
-
-        inputList.forEach((inputElement: HTMLInputElement) => {
-
-            inputElement.addEventListener("input", () => {
-                this.checkInputValidity(inputElement, form);
-                this.toggleButtonState(form, inputList);
-            });
-        });
-    }
-      
-    // Функция обнуления поля ошибок при закрытии модального окна
-    
-    clearValidation(nameForm: string): void {
-
-        let form: HTMLFormElement | null = null;
-        let inputList: HTMLInputElement[] | null =null;
-
-        if (this.formList[nameForm]) {
-            // Форма уже существует, значит, мы ничего не делаем
-            form = this.formList[nameForm].formValidation;
-            inputList = this.formList[nameForm].inputList;
-        }
-
-        this.toggleButtonState(form, inputList);
-        inputList.forEach((inputElement) => {
-          this.checkInputValidity(inputElement , form);
-        });
-    }
-}
 
 
 

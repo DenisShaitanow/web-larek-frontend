@@ -10,7 +10,6 @@ export class LarekModel implements ILarekModel {
      busket: IBasket;
      order: IOrder;
      api: Api;
-     apiImage: Api;
 
 
     constructor(
@@ -18,13 +17,11 @@ export class LarekModel implements ILarekModel {
         busketArg: IBasket,
         orderArg: IOrder,
         apiArg: Api,
-        apiImageArg: Api
     ) {
         this.personalInformation=personalInformationArg;
         this.busket=busketArg;
         this.order=orderArg;
         this.api=apiArg;
-        this.apiImage=apiImageArg;
     }
 
     getProductList(): Promise<IProduct[]> {

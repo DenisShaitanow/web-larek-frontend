@@ -3,7 +3,7 @@ import { ILarek } from "../../types/presenter/presenter";
 import { ILarekModel} from "../../types/model/model";
 import {IEvents} from "../base/events";
 import { IView, ProductSettings} from "../../types/view/view";
-import { Validation } from "../view/view";
+
 
 
 export class Larek implements ILarek {
@@ -31,6 +31,8 @@ export class Larek implements ILarek {
     }
 
     async init(): Promise<IProduct[]> {
+        this.view.init();
+
        await this.renderProductList();
        this.view.startStartListeners();
        return this.renderProductList();
@@ -47,7 +49,7 @@ export class Larek implements ILarek {
 
     openOrder(): void {
         this.view.renderOrderFirst();
-        this.view.openModalWindow();
+        this.view.modalWindow.openModalWindow();
     };
 
     orderContinue(data:  { pay: "personally" | "online" | null, address: string; }): void {
@@ -66,7 +68,7 @@ export class Larek implements ILarek {
     }
 
     newBuys(): void {
-        this.view.closeModalWindow();
+        this.view.modalWindow.closeModalWindow();
         this.renderProductList();
     }
 
@@ -82,7 +84,7 @@ export class Larek implements ILarek {
             image: rawProduct.image,
         };
         this.view.uppendElement(this.view.renderCard(settings, 'CardPreview'), 'modalContent', true);
-        this.view.openModalWindow();
+        this.view.modalWindow.openModalWindow();
         return rawProduct;
     }
 
@@ -106,8 +108,7 @@ export class Larek implements ILarek {
 
     openBusket(): void {
         this.view.renderBusket(this.larekModel.busket.productList, this.larekModel.busket.totalPrice.toString());
-        
-        this.view.openModalWindow();
+        this.view.modalWindow.openModalWindow();
        
     };
 
