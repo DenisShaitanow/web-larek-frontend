@@ -13,7 +13,7 @@ const apiImage=new Api(CDN_URL);
 const order=new Order();
 const personalInformation=new PersonalInformation();
 const busket=new Basket();
-const larekModel=new LarekModel(personalInformation, busket, order, api, apiImage); // собрал модель
+const larekModel=new LarekModel(personalInformation, busket, order, api); // собрал модель
 
 const emitter=new EventEmitter();
 const view=new View(emitter);  // собрал отображение
@@ -23,10 +23,7 @@ const larek=new Larek(larekModel, emitter, view); // собираю презен
 // начало работы страницы
 
 
-larek.view.addModalWindowContainer<HTMLDivElement>('#modal-container');  // назначаю модальное окно из верстки, которое будет выскакивать
-larek.view.addAppendPlace('gallery', 'gallery'); // назначаю место, куда будет вставляться карточки
-larek.view.addAppendPlace<HTMLDivElement>('modalContent' , 'modal__content', larek.view.modalWindow);  // назначаю место в модальном окне, куда вставляется контент
-larek.view.addAppendPlace<HTMLUListElement>('basket' , 'basket__list', larek.view.templateBasket); // назначаю место для апенда списка карточек в корзине
+
 larek.init();
 
 
