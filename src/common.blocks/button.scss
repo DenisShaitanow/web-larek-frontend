@@ -17,4 +17,8 @@
     @include mixins.button(white, $primaryLight, $primaryLight);
     border: $hoverBorder;
   }
+
+  &_checked {
+    background-color: #83FA9D;
+  }
 }

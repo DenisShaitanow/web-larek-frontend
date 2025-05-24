@@ -1,21 +1,24 @@
 
 import {IEvents} from "../../components/base/events";
 import { TemplateCardType } from "../../components/view/view";
+import { IValidation } from "./validation";
+import { IModalWindow } from "./modalWindow";
 
 export interface IView {
     validation: IValidation;
     emitter: IEvents;
+    modalWindow: IModalWindow;
+
     uppendPlaces: Record<string, HTMLElement>;
-    modalWindow: HTMLElement;
     headerBusketButton: HTMLButtonElement;
     headerBusketButtonCounter: HTMLSpanElement;
-    templateBasket: HTMLElement;
+    Basket: HTMLElement;
     templateCardCatalog: HTMLTemplateElement;
     templateCardPreview: HTMLTemplateElement;
     templateCardBasket: HTMLTemplateElement;
     
+    init(): void;
     addAppendPlace<T extends HTMLElement>(placeName: string, classForAppend: string, context?: HTMLElement): void; // метод добавляет в массив "Места для аппенда" новое место. 
-    addModalWindowContainer<T extends HTMLElement>(place: string): void // метод для заполнения поля, которое хранит ДОМ элемент с модальным окном, которое открывает и закрывают соответствующие методы
     renderCardsArray (cardsArray: ProductSettings[], cardType: TemplateCardType, place: string, doEmpty?: boolean): void; // рендерится сразу массив карточек и выводится на страницу
     renderCard(settingsCard: ProductSettings, cardType: TemplateCardType, numberItem?: number): HTMLElement; // рендерится карточка товара в одном из трех видов
     renderBusket(productList: ProductSettings[], totalPrice: string): void; // рендерится и выводится в модальное окно корзина
@@ -24,9 +27,6 @@ export interface IView {
     renderOrderContacts(): void; // рендерит форму ввода конактных данных в модальном окне
     renderPayDone(totalOrder: string): void; // рендерит модальное окно Покупка совершена
     uppendElement(element: HTMLElement, place: string, doEmpty: boolean): void; // выводит отрендеренный элемент в казанное место
-    openModalWindow(): void; // открывает модальное окно
-    closeModalWindow(): void;  // закрывает модальное окно
-    handleEscKeyUp(evt: KeyboardEvent): void; // слушает нажатие ESC для закрытия модального окна
     startStartListeners(): void;  // навешивает слушатель на кнопку корзины, на крестик модального окна, не его окрестности.
     emptyButtonBasketCounter(): void // делает счетчик корзины нулевым
     
@@ -61,21 +61,5 @@ export interface BusketSettings {
     total_price: number;
 }
 
-export type FormForValidation = {
-    formValidation: HTMLFormElement;
-    inputList: HTMLInputElement[];
-    validity: boolean
-}
 
 
-export interface IValidation {
-    formList: Record<string, FormForValidation>;
-
-    formListSet( nameForm: string, formElement: HTMLFormElement, inputClass: string): void;
-    checkInputValidity(inputElement: HTMLInputElement, formElement: HTMLFormElement): void;
-    showInputError( errorMessage: string, formElement: HTMLFormElement): void;
-    hideInputError(formElement: HTMLFormElement): void;
-    toggleButtonState(formElement: HTMLFormElement, inputList: HTMLInputElement[]): void;
-    setEventListeners(nameForm: string): void;
-    clearValidation(nameForm: string): void;
-}

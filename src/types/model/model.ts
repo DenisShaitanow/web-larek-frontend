@@ -7,7 +7,6 @@ export interface ILarekModel {
     busket: IBasket;
     order: IOrder;
     api: Api;
-    apiImage: Api;
 
     getProductList():  Promise<IProduct[]>;
     selectProduct(id: string): Promise<IProduct>;
@@ -63,7 +62,7 @@ export interface IOrder {
 
 }
 
-export type OrderData={
+export type OrderData = {
     payment: "personally" | "online";
     email: string;
     phone: string;

@@ -50,6 +50,8 @@
     font-weight: 500;
     margin: 0;
     flex-grow: 1;
+    inline-size: 70%;
+    text-align: left;
   }
   &__text {
     text-align: left;
@@ -60,6 +62,8 @@
     border-radius: 2.5rem;
     margin-bottom: 12px;
     color: $primary;
+    max-inline-size: 10rem;
+    
 
     &_soft {
       background-color: $category1;
@@ -81,6 +85,6 @@
 
   }
   &__price {
-
+    max-inline-size: 10em;
   }
 }
