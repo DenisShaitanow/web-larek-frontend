@@ -11,9 +11,9 @@ export class AppData {
     preview: IProduct = null;
     order: IOrder = {
         payment: null,
-        address: '',
-        email: '',
-        phone: '',
+        address: sessionStorage.getItem('address') || '',
+        email: sessionStorage.getItem('email') || '',
+        phone: sessionStorage.getItem('phone') || '',
         items: [],
         total: 0
 
@@ -65,8 +65,10 @@ export class AppData {
     setOrderField(field: keyof IOrderForm, value: string) {
         if (field === 'payment') {
             this.selectPayment(value as PaymentType);
+            sessionStorage[`${field}`] = value;
         } else {
             this.order[field] = value;
+            sessionStorage[`${field}`] = value;
         }
 
         if (this.order.payment && this.validateOrder()) {
@@ -78,7 +80,6 @@ export class AppData {
 
     validateOrder() {
         const errors: typeof this.errorsOfForms = {};
-
         if (this.order.payment === null) {
             errors.payment = "Выберете способ оплаты";
         }

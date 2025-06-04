@@ -3,7 +3,7 @@ import './scss/styles.scss'
 import { DataApi } from "./components/DataApi";
 import { API_URL, CDN_URL } from './utils/constants';
 import { cloneTemplate, ensureElement } from './utils/utils';
-import { IOrder, IProduct, IOrderForm } from './types';
+import { IProduct, IOrderForm } from './types';
 import { Card } from './components/Card';
 import { Modal } from './components/common/Modal';
 
@@ -37,36 +37,38 @@ events.on('contacts:submit', () => {
             const success = new Success(cloneTemplate(ensureElement<HTMLTemplateElement>('#success')), {
                 onClick: () => {
                     modal.close();
-                    appData.emptyBasket();
                 }
             });
 
             modal.render({content: success.render(result)});
-
+            appData.emptyBasket();
         }).catch(err => {console.error(err)});
 });
 
 events.on('order:open', () => {
     modal.render({
         content: orderForm.render({
-            payment: null,
-            address: '',
-            valid: false,
-            errors: []
-        })
-    })
-})
+            
+                payment: null,
+                address: sessionStorage.getItem('address') || '', // Берём адрес из storege, если есть, иначе пустой строкой
+                valid: false,
+                errors: []
+            },
+        ),
+    });
+});
 
 events.on('order:submit', () => {
     modal.render({
         content: contactsForm.render({
-            email: '',
-            phone: '',
+            email: sessionStorage.getItem('email') || '',
+            phone: sessionStorage.getItem('phone') || '',
             valid: false,
             errors: []
 
         })
     })
+    appData.validateOrder();
 });
 
 events.on('order:ok', () => {
@@ -84,6 +86,7 @@ events.on(/^contacts\..*:change/, (data: {field: keyof IOrderForm, value: string
 events.on('Errors:change', (errors: Partial<Record<keyof IOrderForm, string>>) => {
     const { payment, address, email, phone} = errors;
     orderForm.valid = !payment   && !address;
+    contactsForm.valid = !email && !phone;
     orderForm.errors = Object.values({payment, address}).filter(i => !!i).join('; ');
     contactsForm.errors = Object.values({email, phone}).filter(i => !!i).join('; ');
 });

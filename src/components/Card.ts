@@ -35,6 +35,7 @@ export class Card extends Component<IProduct> {
                 container.addEventListener('click', actions.onClick);
             }
         }
+
     }
 
     toogle(modifer: CardType) {
@@ -65,6 +66,23 @@ export class Card extends Component<IProduct> {
     }
 
     set category(value: string) {
+        switch(value) {
+            case "софт-скил":
+              this._category?.classList.add('card__category_soft');
+              break;
+            case "другое":
+              this._category?.classList.add('card__category_other');
+              break;
+            case "дополнительное":
+              this._category?.classList.add('card__category_additional');
+              break;
+            case "кнопка":
+              this._category?.classList.add('card__category_button');
+              break;
+            case "хард-скил":
+              this._category?.classList.add('card__category_hard');
+              break;
+          }
         this.setText(this._category, value);
     }
 

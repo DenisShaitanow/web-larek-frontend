@@ -30,11 +30,13 @@ export class Modal extends Component<IModal> {
     open() {
         this.container.classList.add('modal_active');
         this.events.emit('modal:open');
+        document.addEventListener('keydown', (evt: KeyboardEvent) => this.handleEscKeyUp(evt));
     }
 
     close() {
         this.container.classList.remove('modal_active');
         this.content = null;
+        document.removeEventListener('keydown', this.handleEscKeyUp);
         this.events.emit('modal:close');
     }
 
@@ -42,6 +44,12 @@ export class Modal extends Component<IModal> {
         super.render(data);
         this.open();
         return this.container;
+    }
+
+    handleEscKeyUp(evt: KeyboardEvent): void { 
+        if (evt.key === "Escape") {
+            this.close();
+        }
     }
 
 }
