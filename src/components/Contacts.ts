@@ -1,14 +1,14 @@
-import { Form } from "./common/Form";
-import { IOrderForm } from "../types";
-import { EventEmitter } from "./base/events";
+import { Form } from './common/Form';
+import { TOrderForm } from '../types';
 
-export class Contacts extends Form<IOrderForm> {
+export class Contacts extends Form<TOrderForm> {
+	set email(value: string) {
+		(this.container.elements.namedItem('email') as HTMLInputElement).value =
+			value;
+	}
 
-    set email(value: string) {
-        (this.container.elements.namedItem('email') as HTMLInputElement).value = value;
-    }
-
-    set phone(value: string) {
-        (this.container.elements.namedItem('phone') as HTMLInputElement).value = value;
-    }
+	set phone(value: string) {
+		(this.container.elements.namedItem('phone') as HTMLInputElement).value =
+			value;
+	}
 }
